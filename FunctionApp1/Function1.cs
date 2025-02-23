@@ -10,10 +10,12 @@ namespace FunctionApp1
     {
         private readonly ILogger<Function1> _logger;
         static readonly HttpClient _httpClient = new HttpClient();
+        private readonly CurrencyDbContext _dbContext;
 
-        public Function1(ILogger<Function1> logger) // Logger is injected
+        public Function1(ILogger<Function1> logger, CurrencyDbContext dbContext)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = logger;
+            _dbContext = dbContext;
         }
 
         [Function("Function1")]
@@ -37,25 +39,24 @@ namespace FunctionApp1
                     _logger.LogError("API request failed or exceeded rate limits.");
                     throw new Exception("API request failed or exceeded rate limits.");
                 }
-                using (var db = new CurrencyDbContext())
+
+                var exchangeRate = new List<ExchangeRate>();
+                foreach (var rate in currencyResponse.Rates)
                 {
-                    var exchangeRate = new List<ExchangeRate>();
-                    foreach (var rate in currencyResponse.Rates)
-                    {
-                        exchangeRate.Add(new ExchangeRate() { TargetCurrency = rate.Key, Rate = rate.Value });
-                    }
-
-                    var newRate = new CurrencyRate
-                    {
-                        CurrencySymbol = currencyResponse.Base,
-                        ConversionDate = currencyResponse.Date,
-                        Rates = exchangeRate
-                    };
-
-                    db.CurrencyRates.Add(newRate);
-                    await db.SaveChangesAsync();
-                    _logger.LogInformation("Daily currency update completed.");
+                    exchangeRate.Add(new ExchangeRate() { TargetCurrency = rate.Key, Rate = rate.Value });
                 }
+
+                var newRate = new CurrencyRate
+                {
+                    CurrencySymbol = currencyResponse.Base,
+                    ConversionDate = currencyResponse.Date,
+                    Rates = exchangeRate
+                };
+
+                _dbContext.CurrencyRates.Add(newRate);
+                await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Daily currency update completed.");
+
             }
             catch (HttpRequestException httpEx)
             {

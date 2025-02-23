@@ -1,18 +1,32 @@
 ﻿using CurrencyExchange.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ExchangeRateKeeper
 {
-
     public class CurrencyDbContext : DbContext
     {
         public DbSet<CurrencyRate> CurrencyRates { get; set; }
 
+        private readonly IConfiguration _configuration;
+
+        public CurrencyDbContext(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer("Server=tcp:exchangerate.database.windows.net,1433;Initial Catalog=ExchangeRate;Persist Security Info=False;User ID=anastasiia;Password=viSSevaSSe47.;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
+            var connectionString = _configuration["ConnectionStrings:ExchangeRateDb"];
 
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Database connection string is missing.");
+            }
+
+            optionsBuilder.UseSqlServer(connectionString);
         }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ExchangeRate>()
