@@ -17,7 +17,7 @@ namespace FunctionApp1
         }
 
         [Function("Function1")]
-        public async Task Run([TimerTrigger("55 * * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("* * 24 * * *")] TimerInfo myTimer)
         {
             try
             {
